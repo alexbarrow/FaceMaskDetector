@@ -5,11 +5,11 @@ import random
 import numpy as np
 
 T1_COLOR = (255, 0, 0)  # Red
-T2_COLOR = (0, 0, 255) # Blue
-T3_COLOR = (0, 255, 0) # Green
+T2_COLOR = (0, 0, 255)   # Blue
+T3_COLOR = (0, 255, 0)   # Green
 TEXT_COLOR = (255, 255, 255)  # White
 
-id_to_labels = {'without_mask': 'without_mask', 'mask_weared_incorrect': 'mask_weared_incorrect', 'with_mask': 'with_mask'}
+id_to_labels = {1: 'with_mask', 2: 'without_mask', 3: 'mask_weared_incorrect'}
 
 
 def get_bb_list(root_path):
@@ -53,8 +53,8 @@ def visualize_bbox(img, bbox, class_name, color, thickness=1):
     x_min, y_min, x_max, y_max = int(x_min), int(y_min), int(x_max), int(y_max)
 
     cv2.rectangle(img, (x_min, y_min), (x_max, y_max), color=color, thickness=thickness)
+    ((text_width, text_height), _) = cv2.getTextSize(str(class_name), cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)
 
-    ((text_width, text_height), _) = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)
     cv2.rectangle(img, (x_min, y_min - int(1.3 * text_height)), (x_min + text_width, y_min), color, -1)
     cv2.putText(
         img,
@@ -63,7 +63,7 @@ def visualize_bbox(img, bbox, class_name, color, thickness=1):
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
         fontScale=0.35,
         color=TEXT_COLOR,
-        lineType=cv2.LINE_AA,
+        lineType=cv2.LINE_AA
     )
     return img
 
@@ -71,7 +71,10 @@ def visualize_bbox(img, bbox, class_name, color, thickness=1):
 def visualize(image, bboxes, labels):
     img = image.copy()
     for bbox, label in zip(bboxes, labels):
-        class_name = id_to_labels[label]
+        if type(label) == int:
+            class_name = id_to_labels[label]
+        else:
+            class_name = label
 
         if class_name == 'without_mask':
             color = T1_COLOR
@@ -111,4 +114,4 @@ def get_sample(n=random.randint(0, 852), show_bb=True, fs=14, info=False, img_fo
 
 
 if __name__ == '__main__':
-    get_sample(658, show_bb=True, info=True)
+    get_sample(show_bb=True, info=True)
