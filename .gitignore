@@ -1,0 +1,9 @@
+.ipynb_checkpoints/
+
+__pycache__/
+
+.idea/
+
+data/annotations/
+
+data/images/
