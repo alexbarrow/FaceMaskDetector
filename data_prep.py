@@ -11,6 +11,8 @@ from albumentations.pytorch import ToTensorV2
 from image_handler import get_bb_list, visualize
 import albumentations as A
 
+from eval import CocoTypeEvaluator, get_coco_api_from_dataset
+
 
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -86,6 +88,7 @@ def get_transform(train):
             ToTensorV2()],
             bbox_params=A.BboxParams(format='pascal_voc', min_area=0, min_visibility=0,
                                      label_fields=['class_labels']))
+
         return transform
 
 
@@ -121,12 +124,15 @@ if __name__ == '__main__':
         dataset, batch_size=1, shuffle=True, num_workers=4,
         collate_fn=collate_fn)
 
+    # coco_dataset = get_coco_api_from_dataset(data_loader.dataset)
+    # coco_evaluator = CocoTypeEvaluator(coco_dataset)
+
     for image, target in data_loader:
         images = list(image for image in image)
         targets = [{k: v for k, v in t.items()} for t in target]
-
-        # print(targets)
-
+    #
+        print(targets)
+    #
         image_0, target_0 = images[0], targets[0]
         image_0 = image_0.permute(1, 2, 0)
 
