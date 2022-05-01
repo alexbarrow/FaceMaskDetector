@@ -2,8 +2,8 @@ import os
 import cv2
 import torch
 import numpy as np
+import shutil
 
-# from eval import CocoTypeEvaluator, get_coco_api_from_dataset
 from torch.utils.data import DataLoader
 
 from albumentations.pytorch import ToTensorV2
@@ -11,11 +11,41 @@ from albumentations.pytorch import ToTensorV2
 from image_handler import get_bb_list, visualize
 import albumentations as A
 
-from eval import CocoTypeEvaluator, get_coco_api_from_dataset
-
 
 def collate_fn(batch):
     return tuple(zip(*batch))
+
+
+def prep_to_prediction(img, bb, lbls):
+    transform = A.Compose([
+        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        A.Resize(height=350, width=350, p=1.0),
+        ToTensorV2()],
+            bbox_params=A.BboxParams(format='pascal_voc', min_area=0, min_visibility=0, label_fields=['class_labels'])
+    )
+
+    transformed = transform(image=img, bboxes=bb, class_labels=lbls)
+    img = transformed['image']
+    bb = transformed['bboxes']
+    return img, bb
+
+
+def data_split(data_path, train_path, test_path, split_size=0.2, rseed=42):
+    np.random.seed(rseed)
+    names = np.array((sorted(os.listdir(os.path.join(data_path, "images")))))
+    index = np.random.choice(names.shape[0], round(names.shape[0]*split_size), replace=False)
+    train = np.setdiff1d(names, names[index])
+
+    for file in names[index]:
+        shutil.copy(data_path+"images/"+str(file), test_path+"images/")
+        shutil.copy(data_path + "annotations/" + ''.join(list(str(file))[:-3])+'xml',
+                    test_path + "annotations/")
+
+    for file in train:
+        shutil.copy(data_path+"images/"+str(file), train_path+"images/")
+        shutil.copy(data_path + "annotations/" + ''.join(list(str(file))[:-3])+'xml',
+                    train_path + "annotations/")
+    print('Ready')
 
 
 labels_to_id = {'with_mask': 1, 'without_mask': 2, 'mask_weared_incorrect': 3}
@@ -70,21 +100,21 @@ class FMDataset(object):
 def get_transform(train):
     if train:
         transform = A.Compose([
-            A.RandomSizedBBoxSafeCrop(width=525, height=600),
+            A.RandomSizedBBoxSafeCrop(width=350, height=350, p=1),
             A.HorizontalFlip(p=0.5),
             A.OneOf([
                 A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=30, val_shift_limit=20, p=1),
                 A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=1),
             ], p=1),
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            A.Resize(height=512, width=512, p=1.0),
+            # A.Resize(height=350, width=350, p=1.0),
             ToTensorV2()],
             bbox_params=A.BboxParams(format='pascal_voc', min_area=0, min_visibility=0, label_fields=['class_labels']))
         return transform
     else:
         transform = A.Compose([
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            A.Resize(height=256, width=256, p=1.0),
+            A.Resize(height=350, width=350, p=1.0),
             ToTensorV2()],
             bbox_params=A.BboxParams(format='pascal_voc', min_area=0, min_visibility=0,
                                      label_fields=['class_labels']))
@@ -113,8 +143,9 @@ class UnNormalize(object):
 
 
 if __name__ == '__main__':
+    # data_split('data/', 'data/train/', 'data/test/')
     unnorm = UnNormalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
-    transform = get_transform(train=False)
+    transform = get_transform(train=True)
     dataset = FMDataset('data/', transform)
 
     # img = image_0.permute(1, 2, 0)
@@ -136,4 +167,4 @@ if __name__ == '__main__':
         image_0, target_0 = images[0], targets[0]
         image_0 = image_0.permute(1, 2, 0)
 
-        visualize(unnorm(image_0), target_0['boxes'], target_0['labels'].tolist())
+        visualize(unnorm(image_0), target_0['boxes'], target['labels'].tolist())
